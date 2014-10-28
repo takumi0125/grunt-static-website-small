@@ -100,7 +100,7 @@ module.exports = (grunt) ->
         unixNewlines: true
         compass: true
         noCache: false
-        sourcemap: false
+        sourcemap: 'none'
         style: 'expanded'
       source:
         expand: true
