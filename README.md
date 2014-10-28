@@ -11,4 +11,4 @@ grunt-static-website-small
 <a href="https://github.com/takumi0125/static-website-basic-small-src" target="_blank">takumi0125/static-website-basic-small-src</a>
 を使用しています。
 
-bowerでインストールされる JS ライブラリは、 js/lib/ に配置されます。
+bowerでインストールされる JS ライブラリは、`js/lib/`に配置されます。
