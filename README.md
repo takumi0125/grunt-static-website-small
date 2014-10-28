@@ -1,7 +1,7 @@
 grunt-static-website-small
 ===============================
 
-静的サイト (小規模用) 制作用の汎用gruntタスクテンプレートです。
+静的サイト (小規模) 制作用の汎用gruntタスクテンプレートです。
 
 基本的には  
 <a href="https://github.com/takumi0125/runt-static-website" target="_blank">takumi0125/runt-static-website</a>  
