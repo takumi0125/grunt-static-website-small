@@ -39,9 +39,9 @@ module.exports = (grunt) ->
       publish: path.join '..', 'htdocs'
 
 
-    #################
-    ###   bower   ###
-    #################
+    ################
+    ###   init   ###
+    ################
 
     #
     # Bowerによるライブラリインストールタスク
@@ -137,13 +137,28 @@ module.exports = (grunt) ->
     sprite:
       index:
         src: [
-          '<%= path.source %>/img/sprites/*.*'
+          '<%= path.source %>/img/_sprites/*.*'
         ]
         destImg: '<%= path.source %>/img/sprites.png'
         destCSS: '<%= path.source %>/css/_sprites.scss'
         imgPath: '/img/sprites.png'
         algorithm: 'binary-tree'
         padding: 1
+
+    #
+    # autoprefixer タスク
+    #
+    # * [grunt-autoprefixer](https://github.com/nDmitry/grunt-autoprefixer)
+    #
+    autoprefixer:
+      options: ''
+      source:
+        expand: true
+        cwd: '<%= path.publish %>'
+        src: '**/!(_)*.css'
+        filter: 'isFile'
+        dest: '<%= path.publish %>'
+        ext: '.css'
 
 
     ##############
@@ -177,7 +192,6 @@ module.exports = (grunt) ->
         cwd: '<%= path.source %>'
         src: [
           '**/*.coffee'
-          '**/*.litcoffee'
           '!**/lib/**/*'
         ]
         filter: 'isFile'
@@ -311,20 +325,17 @@ module.exports = (grunt) ->
           '**/*'
           '!**/*.coffee'
           '!**/*.ts'
-          '!**/*.hbs'
           '!**/*.jade'
           '!**/*.less'
-          '!**/*.litcoffee'
           '!**/*.sass'
           '!**/*.scss'
           '!**/*.styl'
-          '!**/sprites*/*'
           '!**/_*/*'
-          '!**/src/*'
-          '!**/*.map'
+          '!**/_*'
           '!data.json'
           '!README.md'
-          '!*/.git/*'
+          '!**/.git/*'
+          '!**/.gitkeep'
         ]
         filter: 'isFile'
         dest: '<%= path.publish %>'
@@ -402,7 +413,6 @@ module.exports = (grunt) ->
       html:
         files: [
           '<%= path.source %>/**/*.html'
-          '<%= path.source %>/**/*.hbs'
           '<%= path.source %>/**/*.jade'
         ]
         tasks: [
@@ -414,7 +424,6 @@ module.exports = (grunt) ->
         files: [
           '<%= path.source %>/**/*.coffee'
           '<%= path.source %>/**/*.js'
-          '<%= path.source %>/**/*.litcoffee'
         ]
         tasks: [
           'js'
@@ -440,6 +449,7 @@ module.exports = (grunt) ->
     css: [
       'sass'
       'stylus'
+      'autoprefixer'
     ]
     html: [
       'jade'
@@ -474,6 +484,7 @@ module.exports = (grunt) ->
 
 
   # Grunt プラグイン読込
+  grunt.loadNpmTasks 'grunt-autoprefixer'
   grunt.loadNpmTasks 'grunt-bower-task'
   grunt.loadNpmTasks 'grunt-contrib-clean'
   grunt.loadNpmTasks 'grunt-contrib-coffee'
