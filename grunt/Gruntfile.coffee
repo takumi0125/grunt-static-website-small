@@ -1,42 +1,110 @@
 'use strict'
 
-# Node.js モジュール読込
-path = require 'path'
+SRC_DIR = './src'
+PUBLISH_DIR = '../htdocs'
+DATA_JSON = "_data.json"
 
-# LiveReload スニペット読込
-lrUtils = require 'grunt-contrib-livereload/lib/utils'
-lrSnippet = lrUtils.livereloadSnippet
+BOWER_INSTALL_DIR_BASE = '' # '/common' or ''
 
-# LiveReload 用ヘルパー関数
-folderMount = (connect, point) ->
-  return connect.static path.resolve(point)
+paths =
+  html: '**/*.html'
+  jade: '**/*.jade'
+  css: '**/*.css'
+  sass: [
+    '**/*.sass'
+    '**/*.scss'
+  ]
+  js: '**/*.js'
+  json: '**/*.json'
+  coffee: '**/*.coffee'
+  img: '**/img/**/*'
+  others: [
+    '**/*'
 
+    '!**/*.html'
+    '!**/*.jade'
+    '!**/*.css'
+    '!**/*.sass'
+    '!**/*.scss'
+    '!**/*.js'
+    '!**/*.json'
+    '!**/*.coffee'
+    '!**/img/**/*'
+    '!**/*.md'
+    '!**/.git/**/*'
+    '!**/.gitkeep'
+    
+    '!_*'
+    '!**/_*/**/*'
+  ]
 
 #
 # Grunt 主要設定
 # --------------
 module.exports = (grunt) ->
+  # 頭に SRC_DIR/ をつけて返す
+  addSrcPath = (path)-> "#{SRC_DIR}/#{path}"
+
+
+  #「_」が先頭のファイル、ディレクトリを除外するように src 用の配列を生成
+  createSrcArr = (name) ->
+    ret = [].concat paths[name], '!_*', '!**/_*/**/*'
+
+  #
+  # spritesmith のタスクを生成
+  # 
+  # @param {string} taskName          タスクを識別するための名前 スプライトタスクが複数ある場合はユニークにする
+  # @param {string} outputFileName    出力されるスプライト画像 / CSS (SCSS) の名前
+  # @param {string} dirBase           コンテンツディレクトリのパス (SRC_DIRからの相対パス)
+  # @param {string} outputImgPathType CSSに記述される画像パスのタイプ (absolute | relative)
+  # @param {string} imgDir            dirBaseから画像ディレクトリへのパス
+  # @param {string} cssDir            dirBaseからCSSディレクトリへのパス
+  #
+  # #{SRC_DIR}#{dirBase}#{imgDir}/_#{outputFileName}/
+  # 以下にソース画像を格納せしておくと
+  # #{SRC_DIR}#{dirBase}#{cssDir}/_#{outputFileName}.scss と
+  # #{SRC_DIR}#{dirBase}#{imgDir}/#{outputFileName}.png が生成される
+  # かつ watch タスクの監視も追加
+  #
+  #
+  # CSS スプライト作成タスク
+  #
+  # * [grunt-spritesmith](https://github.com/Ensighten/grunt-spritesmith)
+  #
+  createSpritesTasks = (taskName, dirBase, outputFileName = 'sprites', outputImgPathType = 'absolute', imgDir = '/img', cssDir = '/css') ->
+    if !conf.hasOwnProperty('sprite') then conf.sprite = {}
+    
+    srcImgFiles = "#{SRC_DIR}#{dirBase}#{imgDir}/_#{outputFileName}/*"
+    conf.sprite[taskName] =
+      src:   [ srcImgFiles ]
+      destImg: "#{SRC_DIR}#{dirBase}#{imgDir}/#{outputFileName}.png"
+      destCSS: "#{SRC_DIR}#{dirBase}#{cssDir}/_#{outputFileName}.scss"
+      algorithm: 'binary-tree'
+      padding: 1
+    if outputImgPathType is 'absolute'
+      conf.sprite[taskName].imgPath = "#{dirBase}#{imgDir}/#{outputFileName}.png"
+
+    if conf.watch.hasOwnProperty('sprite')
+      conf.watch.sprite.files.push srcImgFiles
+    else
+      conf.watch.sprite =
+        files: [ srcImgFiles ]
+        tasks: [
+          'sprite'
+          'notify:build'
+        ]
+    conf.watch.img.files.push "!#{srcImgFiles}"
+
 
   #
   # Grunt 初期設定オブジェクト (`grunt.initConfig()` の引数として渡す用)
   #
   conf =
 
-    # `package.json` を (`<%= pkg.PROP  %>` として読込)
-    pkg: grunt.file.readJSON 'package.json'
-
-    # バナー文字列 (`<%= banner %>` として読込)
-    banner: """
-      /*!
-       * <%= pkg.title || pkg.name %>
-       * v<%= pkg.version %> - <%= grunt.template.today('isoDateTime') %>
-       */
-      """
-
-    # 基本パス設定 (`<%= path.PROP %>` として読込)
+    # 各種パス設定 (`<%= path.PROP %>` として読込)
     path:
-      source: 'src'
-      publish: path.join '..', 'htdocs'
+      source: './src'
+      publish: '../htdocs'
 
 
     ################
@@ -49,14 +117,12 @@ module.exports = (grunt) ->
     # * [grunt-bower-task](https://github.com/yatskevich/grunt-bower-task)
     #
     bower:
-      install:
+      source:
         options:
-          targetDir: '<%= path.source %>'
+          targetDir: "#{SRC_DIR}#{BOWER_INSTALL_DIR_BASE}"
           layout: (type, component, source)->
-            if type is 'css'
-              return path.join 'css', 'lib'
-            else
-              return path.join 'js', 'lib'
+            if source.match /(.*)\.css/ then return 'css/lib'
+            if source.match /(.*)\.js/ then return 'js/lib'
           install: true
           verbose: true
           cleanTargetDir: false
@@ -66,7 +132,7 @@ module.exports = (grunt) ->
     ################
     ###   html   ###
     ################ 
-
+    
     #
     # Jade コンパイルタスク
     #
@@ -76,13 +142,13 @@ module.exports = (grunt) ->
       options:
         pretty: true
         data: ->
-          return grunt.file.readJSON './src/data.json'
+          return grunt.file.readJSON addSrcPath DATA_JSON
       source:
         expand: true
-        cwd: '<%= path.source %>'
-        src: '**/!(_)*.jade'
+        cwd: SRC_DIR
+        src: createSrcArr 'jade'
         filter: 'isFile'
-        dest: '<%= path.publish %>'
+        dest: PUBLISH_DIR
         ext: '.html'
 
 
@@ -91,7 +157,7 @@ module.exports = (grunt) ->
     ###############
 
     #
-    # Sass / SassyCSS コンパイルタスク
+    # Sass/SCSS コンパイルタスク
     #
     # * [grunt-contrib-sass](https://github.com/gruntjs/grunt-contrib-sass)
     #
@@ -104,46 +170,11 @@ module.exports = (grunt) ->
         style: 'expanded'
       source:
         expand: true
-        cwd: '<%= path.source %>'
-        src: [
-          '**/!(_)*.sass'
-          '**/!(_)*.scss'
-        ]
+        cwd: SRC_DIR
+        src: createSrcArr 'sass'
         filter: 'isFile'
-        dest: '<%= path.publish %>'
+        dest: PUBLISH_DIR
         ext: '.css'
-
-    # Stylus コンパイルタスク
-    #
-    # * [grunt-contrib-stylus](https://github.com/gruntjs/grunt-contrib-stylus)
-    #
-    stylus:
-      options:
-        compress: false
-        'include css': false
-      source:
-        expand: true
-        cwd: '<%= path.source %>'
-        src: '**/!(_)*.styl'
-        filter: 'isFile'
-        dest: '<%= path.publish %>'
-        ext: '.css'
-    
-    #
-    # CSS スプライト作成タスク
-    #
-    # * [grunt-spritesmith](https://github.com/Ensighten/grunt-spritesmith)
-    #
-    sprite:
-      index:
-        src: [
-          '<%= path.source %>/img/_sprites/*.*'
-        ]
-        destImg: '<%= path.source %>/img/sprites.png'
-        destCSS: '<%= path.source %>/css/_sprites.scss'
-        imgPath: '/img/sprites.png'
-        algorithm: 'binary-tree'
-        padding: 1
 
     #
     # autoprefixer タスク
@@ -160,7 +191,7 @@ module.exports = (grunt) ->
         dest: '<%= path.publish %>'
         ext: '.css'
 
-
+    
     ##############
     ###   js   ###
     ##############
@@ -187,13 +218,10 @@ module.exports = (grunt) ->
         no_backticks: true
         line_endings: true
         no_stand_alone_at: false
-      source:
+      general:
         expand: true
-        cwd: '<%= path.source %>'
-        src: [
-          '**/*.coffee'
-          '!**/lib/**/*'
-        ]
+        cwd: SRC_DIR
+        src: paths.coffee
         filter: 'isFile'
 
     #
@@ -207,37 +235,13 @@ module.exports = (grunt) ->
         sourceMap: false
       general:
         expand: true
-        cwd: '<%= path.source %>'
-        src: [
-          '**/*.coffee'
-          '**/*.litcofee'
-        ]
+        cwd: SRC_DIR
+        src: createSrcArr 'coffee'
         filter: 'isFile'
-        dest: '<%= path.publish %>'
+        dest: PUBLISH_DIR
         ext: '.js'
 
-    #
-    # TypeScript コンパイルタスク
-    #
-    # * [grunt-typescript](https://github.com/k-maru/grunt-typescript)
-    #
-    typescript:
-      options:
-        sourceMap: true
-        module: 'amd'
-        target: 'es5'
-        declaration: false
-      general:
-        expand: true
-        cwd: '<%= path.source %>'
-        src: [
-          '**/*.ts'
-          '!**/*.d.ts'
-        ]
-        filter: 'isFile'
-        dest: '<%= path.publish %>'
-        ext: '.js'
-
+        
     #
     # JSHint による JavaScript 静的解析タスク
     #
@@ -248,10 +252,10 @@ module.exports = (grunt) ->
         jshintrc: '.jshintrc'
       source:
         expand: true
-        cwd: '<%= path.source %>'
+        cwd: SRC_DIR
         src: [
-          '**/*.js'
-          '!**/lib/**/*.js'
+          paths.js
+          '!**/lib/**/*.js' #ライブラリは除外
         ]
         filter: 'isFile'
 
@@ -267,10 +271,9 @@ module.exports = (grunt) ->
     #
     jsonlint:
       source:
-        src: [
-          '<%= path.source %>/**/*.json'
-          'package.json'
-        ]
+        expand: true
+        cwd: SRC_DIR
+        src: paths.json
         filter: 'isFile'
 
 
@@ -287,7 +290,7 @@ module.exports = (grunt) ->
       options:
         force: true
       general:
-        src: '<%= path.publish %>'
+        src: PUBLISH_DIR
 
 
     ###################
@@ -304,8 +307,9 @@ module.exports = (grunt) ->
       publish:
         options:
           port: 50000
-          middleware: (connect, options) ->
-            return [lrSnippet, folderMount(connect, '../htdocs')]
+          hostname: '*'
+          base: PUBLISH_DIR
+          livereload: true
 
 
     ################
@@ -318,27 +322,47 @@ module.exports = (grunt) ->
     # * [grunt-contrib-copy](https://github.com/gruntjs/grunt-contrib-copy)
     #
     copy:
-      general:
+      html:
         expand: true
-        cwd: '<%= path.source %>'
-        src: [
-          '**/*'
-          '!**/*.coffee'
-          '!**/*.ts'
-          '!**/*.jade'
-          '!**/*.less'
-          '!**/*.sass'
-          '!**/*.scss'
-          '!**/*.styl'
-          '!**/_*/*'
-          '!**/_*'
-          '!data.json'
-          '!README.md'
-          '!**/.git/*'
-          '!**/.gitkeep'
-        ]
+        cwd: SRC_DIR
+        src: createSrcArr 'html'
         filter: 'isFile'
-        dest: '<%= path.publish %>'
+        dest: PUBLISH_DIR
+        
+      css:
+        expand: true
+        cwd: SRC_DIR
+        src: createSrcArr 'css'
+        filter: 'isFile'
+        dest: PUBLISH_DIR
+
+      js:
+        expand: true
+        cwd: SRC_DIR
+        src: createSrcArr 'js'
+        filter: 'isFile'
+        dest: PUBLISH_DIR
+
+      json:
+        expand: true
+        cwd: SRC_DIR
+        src: createSrcArr 'json'
+        filter: 'isFile'
+        dest: PUBLISH_DIR
+
+      img:
+        expand: true
+        cwd: SRC_DIR
+        src: createSrcArr 'img'
+        filter: 'isFile'
+        dest: PUBLISH_DIR
+
+      others:
+        expand: true
+        cwd: SRC_DIR
+        src: paths.others
+        filter: 'isFile'
+        dest: PUBLISH_DIR
 
 
     ##################
@@ -370,12 +394,12 @@ module.exports = (grunt) ->
     #
     # * [grunt-contrib-concat](https://github.com/gruntjs/grunt-contrib-concat)
     #
-    # concat:
-      # options:
-        # separator: ''
-      # easeljs:
-        # src: []
-        # dest: '<%= path.source %>/js/build.js'
+    concat:
+      options:
+        separator: ''
+      easeljs:
+        src: []
+        dest: "#{SRC_DIR}/common/js/build.js"
 
 
     #################
@@ -390,54 +414,78 @@ module.exports = (grunt) ->
     watch:
       options:
         livereload: true
-      image:
-        files: [
-          '<%= path.source %>/**/img/**/*'
-        ]
-        tasks: [
-          'image'
-          'copy'
-          'notify:build'
-        ]
-      css:
-        files: [
-          '<%= path.source %>/**/*.css'
-          '<%= path.source %>/**/*.sass'
-          '<%= path.source %>/**/*.scss'
-        ]
-        tasks: [
-          'css'
-          'copy'
-          'notify:build'
-        ]
+      
       html:
-        files: [
-          '<%= path.source %>/**/*.html'
-          '<%= path.source %>/**/*.jade'
-        ]
+        files: addSrcPath paths.html
         tasks: [
-          'html'
-          'copy'
+          'copy:html'
           'notify:build'
         ]
+      
+      jade:
+        files: addSrcPath paths.jade
+        tasks: [
+          'jade'
+          'notify:build'
+        ]
+      
+      css:
+        files: addSrcPath paths.css
+        tasks: [
+          'copy:css'
+          'autoprefixer'
+          'notify:build'
+        ]
+      
+      sass:
+        files: addSrcPath paths.sass
+        tasks: [
+          'sass'
+          'notify:build'
+        ]
+      
       js:
-        files: [
-          '<%= path.source %>/**/*.coffee'
-          '<%= path.source %>/**/*.js'
-        ]
+        files: addSrcPath paths.js
         tasks: [
+          'jshint'
           'js'
-          'copy'
+          'copy:js'
           'notify:build'
         ]
+      
       json:
-        files: '<%= path.source %>/**/*.json'
+        files: addSrcPath paths.json
         tasks: [
-          'json'
-          'html'
-          'copy'
+          'jsonlint'
+          'copy:json'
           'notify:build'
         ]
+      
+      coffee:
+        files: addSrcPath paths.coffee
+        tasks: [
+          'coffeelint'
+          'coffee'
+          'notify:build'
+        ]
+      
+      img:
+        files: [ addSrcPath paths.img ]
+        tasks: [
+          'copy:img'
+          'notify:build'
+        ]
+
+      others:
+        files: addSrcPath paths.others
+        tasks: [
+          'copy:others'
+          'notify:build'
+        ]
+      
+      
+  # spritesタスクを生成
+  createSpritesTasks 'index', ''
 
   #
   # 実行タスクの順次定義 (`grunt.registerTask tasks.TASK` として登録)
@@ -448,23 +496,26 @@ module.exports = (grunt) ->
     ]
     css: [
       'sass'
-      'stylus'
+      'copy:css'
       'autoprefixer'
     ]
     html: [
       'jade'
+      'copy:html'
     ]
-    image: [
+    img: [
       'sprite'
+      'copy:img'
     ]
     js: [
-      'jshint'
       'coffeelint'
       'coffee'
-      'typescript'
+      'jshint'
+      'copy:js'
     ]
     json: [
       'jsonlint'
+      'copy:json'
     ]
     watcher: [
       'notify:watch'
@@ -473,12 +524,12 @@ module.exports = (grunt) ->
     ]
     default: [
       'clean'
-      'image'
-      'css'
-      'html'
       'js'
       'json'
-      'copy'
+      'img'
+      'css'
+      'html'
+      'copy:others'
       'notify:build'
     ]
 
@@ -495,7 +546,6 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-contrib-jshint'
   grunt.loadNpmTasks 'grunt-contrib-livereload'
   grunt.loadNpmTasks 'grunt-contrib-sass'
-  grunt.loadNpmTasks 'grunt-contrib-stylus'
   grunt.loadNpmTasks 'grunt-contrib-watch'
   grunt.loadNpmTasks 'grunt-coffeelint'
   grunt.loadNpmTasks 'grunt-jsonlint'
@@ -510,9 +560,8 @@ module.exports = (grunt) ->
   grunt.registerTask 'init',    tasks.init
   grunt.registerTask 'css',     tasks.css
   grunt.registerTask 'html',    tasks.html
-  grunt.registerTask 'image',   tasks.image
+  grunt.registerTask 'img',     tasks.img
   grunt.registerTask 'js',      tasks.js
   grunt.registerTask 'json',    tasks.json
   grunt.registerTask 'watcher', tasks.watcher
   grunt.registerTask 'default', tasks.default
-
