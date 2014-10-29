@@ -71,7 +71,7 @@ module.exports = (grunt) ->
   #
   # * [grunt-spritesmith](https://github.com/Ensighten/grunt-spritesmith)
   #
-  createSpritesTasks = (taskName, dirBase, outputFileName = 'sprites', outputImgPathType = 'absolute', imgDir = '/img', cssDir = '/css') ->
+  createSpritesTask = (taskName, dirBase, outputFileName = 'sprites', outputImgPathType = 'absolute', imgDir = '/img', cssDir = '/css') ->
     if !conf.hasOwnProperty('sprite') then conf.sprite = {}
     
     srcImgFiles = "#{SRC_DIR}#{dirBase}#{imgDir}/_#{outputFileName}/*"
@@ -485,7 +485,7 @@ module.exports = (grunt) ->
       
       
   # spritesタスクを生成
-  createSpritesTasks 'index', ''
+  createSpritesTask 'index', ''
 
   #
   # 実行タスクの順次定義 (`grunt.registerTask tasks.TASK` として登録)
