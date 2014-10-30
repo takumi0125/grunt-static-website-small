@@ -5,9 +5,9 @@ grunt-static-website-small
 
 ## インストール
 ```bash
-mkdir yourProject/
+mkdir yourProject
 cd yourProject
-git clone git@github.com:takumi0125/grunt-static-website-small.git
+git clone git@github.com:takumi0125/grunt-static-website-small.git .
 cd grunt
 npm install
 ```
