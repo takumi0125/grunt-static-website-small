@@ -30,7 +30,7 @@ paths =
     '!**/*.coffee'
     '!**/img/**'
     '!**/*.md'
-    '!**/.git/**/*'
+    '!**/.git/**'
     '!**/.gitkeep'
     '!_*'
     '!**/_*/**'
@@ -245,8 +245,6 @@ module.exports = (grunt) ->
     # * [grunt-contrib-jshint](https://github.com/gruntjs/grunt-contrib-jshint)
     #
     jshint:
-      options:
-        jshintrc: '.jshintrc'
       source:
         expand: true
         cwd: SRC_DIR
@@ -548,7 +546,6 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-jsonlint'
   grunt.loadNpmTasks 'grunt-notify'
   grunt.loadNpmTasks 'grunt-spritesmith'
-  grunt.loadNpmTasks 'grunt-typescript'
 
   # 初期設定オブジェクトの登録
   grunt.initConfig conf
