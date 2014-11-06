@@ -22,12 +22,7 @@ npm install
 
 基本構造は
 <a href="https://github.com/takumi0125/static-website-basic-small-src" target="_blank">takumi0125/static-website-basic-small-src</a>
-を使用しています。
+を `src`  以下にサブモジュールとして使用しています。
 
-```bash
-git submodule update --init
-```
-
-で上記サブモジュールの初期化を行っています。
 
 bowerでインストールされる JS ライブラリは、 `js/lib/` に配置されます。
