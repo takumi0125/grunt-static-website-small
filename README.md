@@ -21,8 +21,8 @@ npm install
 と同じ使用方法です。
 
 基本構造は
-<a href="https://github.com/takumi0125/static-website-basic-small-src" target="_blank">takumi0125/static-website-basic-small-src</a>
-を `src`  以下にサブモジュールとして使用しています。
+<a href="https://github.com/takumi0125/static-website-basic-small-src" target="_blank">takumi0125/static-website-basic-small-src</a>  
+を `src`  以下でサブモジュールとして使用しています。
 
 
 bowerでインストールされる JS ライブラリは、 `js/lib/` に配置されます。
